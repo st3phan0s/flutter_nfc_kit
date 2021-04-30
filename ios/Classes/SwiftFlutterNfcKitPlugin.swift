@@ -176,8 +176,24 @@ public class SwiftFlutterNfcKitPlugin: NSObject, FlutterPlugin, NFCTagReaderSess
                 }
                 if ndefTag != nil {
                     ndefTag!.readNDEF(completionHandler: { (msg: NFCNDEFMessage?, error: Error?) in
-                        if let error = error {
-                            result(FlutterError(code: "500", message: "Read NDEF error", details: error.localizedDescription))
+                        let errorWithCode = error as? NFCReaderError
+
+                        if errorWithCode != nil {
+                            if let miFareTag = ndefTag as? NFCMiFareTag {
+                                var records: [[String: Any]] = []
+                                
+                                var entry: [String: Any] = [:]
+
+                                entry["identifier"] = String(decoding: miFareTag.identifier, as: UTF8.self)
+
+                                records.append(entry)
+                                
+                                let jsonData = try! JSONSerialization.data(withJSONObject: records)
+                                let jsonString = String(data: jsonData, encoding: .utf8)
+                                result(jsonString)
+                            } else {
+                                result(FlutterError(code: String(errorWithCode!.errorCode), message: "Read NDEF error", details: errorWithCode!.localizedDescription))
+                            }
                         } else if let msg = msg {
                             var records: [[String: Any]] = []
 
